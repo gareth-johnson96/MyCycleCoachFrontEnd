@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCurrentPlan, getPlanWithSessions, generatePlan, updateSession } from './trainingApi';
 import type { PlannedSession } from './types';
+import { formatDateLong, formatDateShort } from './dateUtils';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
 import Calendar from '../../components/Calendar';
@@ -146,8 +147,8 @@ export default function TrainingPage() {
                   <div style={styles.metaItem}>
                     <span style={styles.metaLabel}>Period:</span>
                     <span style={styles.metaValue}>
-                      {new Date(planMetadata.startDate).toLocaleDateString()} →{' '}
-                      {new Date(planMetadata.endDate).toLocaleDateString()}
+                      {formatDateShort(planMetadata.startDate)} →{' '}
+                      {formatDateShort(planMetadata.endDate)}
                     </span>
                   </div>
                   <div style={styles.metaItem}>
@@ -187,11 +188,7 @@ export default function TrainingPage() {
               {selectedDate && selectedDateSessions.length > 0 && (
                 <div style={styles.detailsContainer}>
                   <h3 style={styles.sectionTitle}>
-                    {new Date(selectedDate).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
+                    {formatDateLong(selectedDate)}
                   </h3>
                   <div style={styles.sessionList}>
                     {selectedDateSessions.map((session) => (
@@ -211,11 +208,7 @@ export default function TrainingPage() {
               {selectedDate && selectedDateSessions.length === 0 && (
                 <div style={styles.detailsContainer}>
                   <h3 style={styles.sectionTitle}>
-                    {new Date(selectedDate).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
+                    {formatDateLong(selectedDate)}
                   </h3>
                   <div style={styles.emptyDateState}>
                     <p style={styles.emptyDateIcon}>🌤️</p>
@@ -253,46 +246,46 @@ function SessionCard({
     <div style={styles.sessionCard}>
       <div style={styles.sessionMain}>
         <div style={styles.sessionHeader}>
-          <div style={styles.sessionType}>
+          <div style={styles.sessionType} aria-label={`Session type: ${session.type}`}>
             {getActivityIcon(session.type)} {session.type}
           </div>
-          <span style={statusBadgeStyle(session.status)}>{session.status}</span>
+          <span style={statusBadgeStyle(session.status)} aria-label={`Status: ${session.status}`}>{session.status}</span>
         </div>
 
         <div style={styles.sessionDetails}>
           {session.distance != null && (
-            <div style={styles.detailItem}>
-              <span style={styles.detailIcon}>📏</span>
+            <div style={styles.detailItem} aria-label={`Distance: ${session.distance} kilometers`}>
+              <span style={styles.detailIcon} aria-hidden="true">📏</span>
               <span style={styles.detailText}>{session.distance} km</span>
             </div>
           )}
           {session.duration != null && (
-            <div style={styles.detailItem}>
-              <span style={styles.detailIcon}>⏱️</span>
+            <div style={styles.detailItem} aria-label={`Duration: ${session.duration} minutes`}>
+              <span style={styles.detailIcon} aria-hidden="true">⏱️</span>
               <span style={styles.detailText}>{session.duration} min</span>
             </div>
           )}
           {session.intensity && (
-            <div style={styles.detailItem}>
-              <span style={styles.detailIcon}>💪</span>
+            <div style={styles.detailItem} aria-label={`Intensity: ${session.intensity}`}>
+              <span style={styles.detailIcon} aria-hidden="true">💪</span>
               <span style={styles.detailText}>{session.intensity}</span>
             </div>
           )}
           {session.tss != null && (
-            <div style={styles.detailItem}>
-              <span style={styles.detailIcon}>📈</span>
+            <div style={styles.detailItem} aria-label={`Training Stress Score: ${session.tss}`}>
+              <span style={styles.detailIcon} aria-hidden="true">📈</span>
               <span style={styles.detailText}>TSS: {session.tss}</span>
             </div>
           )}
           {session.elevation != null && (
-            <div style={styles.detailItem}>
-              <span style={styles.detailIcon}>⛰️</span>
+            <div style={styles.detailItem} aria-label={`Elevation gain: ${session.elevation} meters`}>
+              <span style={styles.detailIcon} aria-hidden="true">⛰️</span>
               <span style={styles.detailText}>{session.elevation}m</span>
             </div>
           )}
           {session.targetZone && (
-            <div style={styles.detailItem}>
-              <span style={styles.detailIcon}>🎯</span>
+            <div style={styles.detailItem} aria-label={`Target zone: ${session.targetZone}`}>
+              <span style={styles.detailIcon} aria-hidden="true">🎯</span>
               <span style={styles.detailText}>Zone {session.targetZone}</span>
             </div>
           )}

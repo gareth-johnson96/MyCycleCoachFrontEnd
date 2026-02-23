@@ -23,8 +23,11 @@ export interface PlannedSession {
   duration: number | null;
   intensity: string;
   status: string;
+  /** Training Stress Score - a measure of training load (typically 0-300) */
   tss: number | null;
+  /** Elevation gain in meters */
   elevation: number | null;
+  /** Target heart rate or power zone (e.g., 'Z1', 'Z2', 'Z3', 'Z4', 'Z5') */
   targetZone: string | null;
 }
 
