@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getCurrentPlan, generatePlan, updateSession } from './trainingApi';
+import { getCurrentPlan, getPlanWithSessions, generatePlan, updateSession } from './trainingApi';
 import type { PlannedSession } from './types';
+import { formatDateLong, formatDateShort } from './dateUtils';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
 import Calendar from '../../components/Calendar';
@@ -11,26 +12,46 @@ export default function TrainingPage() {
   const [goalInput, setGoalInput] = useState('');
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
 
+  // First, get the current plan metadata
   const {
-    data: plan,
-    isLoading,
-    isError,
-    error,
+    data: planMetadata,
+    isLoading: isLoadingMetadata,
+    isError: isMetadataError,
+    error: metadataError,
   } = useQuery({
-    queryKey: ['trainingPlan'],
-    queryFn: () => getCurrentPlan(dateRange?.from, dateRange?.to),
+    queryKey: ['trainingPlanMetadata'],
+    queryFn: getCurrentPlan,
+    retry: false,
+  });
+
+  // Calculate date range based on plan dates
+  const dateRange = useMemo(() => {
+    if (!planMetadata) return null;
+    return {
+      from: planMetadata.startDate,
+      to: planMetadata.endDate,
+    };
+  }, [planMetadata]);
+
+  // Fetch sessions when we have a date range
+  const {
+    data: planDetails,
+    isLoading: isLoadingSessions,
+    isError: isSessionsError,
+  } = useQuery({
+    queryKey: ['trainingPlanSessions', dateRange],
+    queryFn: () => getPlanWithSessions(dateRange!.from, dateRange!.to),
+    enabled: !!dateRange,
     retry: false,
   });
 
   const generateMutation = useMutation({
     mutationFn: () => generatePlan(goalInput.trim() || undefined),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['trainingPlan'] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trainingPlanMetadata'] });
+      queryClient.invalidateQueries({ queryKey: ['trainingPlanSessions'] });
       setGenerateError(null);
-      // Set date range to the plan's dates
-      setDateRange({ from: data.startDate, to: data.endDate });
     },
     onError: () => setGenerateError('Failed to generate plan.'),
   });
@@ -39,34 +60,46 @@ export default function TrainingPage() {
     mutationFn: ({ sessionId, status }: { sessionId: number; status: 'COMPLETED' | 'SKIPPED' }) =>
       updateSession(sessionId, { status }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trainingPlan'] });
+      queryClient.invalidateQueries({ queryKey: ['trainingPlanSessions'] });
     },
   });
 
+  // Combine all sessions for calendar display
+  const allSessions = useMemo(() => {
+    if (!planDetails) return [];
+    return [...planDetails.completedSessions, ...planDetails.trainingPlan];
+  }, [planDetails]);
+
   const selectedDateSessions = useMemo(() => {
-    if (!plan?.sessions || !selectedDate) return [];
-    return plan.sessions.filter((session) => {
+    if (!allSessions.length || !selectedDate) return [];
+    return allSessions.filter((session) => {
       const sessionDate = session.scheduledDate.split('T')[0];
       return sessionDate === selectedDate;
     });
-  }, [plan?.sessions, selectedDate]);
+  }, [allSessions, selectedDate]);
 
   const noActivePlan =
-    isError &&
-    (error as { response?: { status?: number } })?.response?.status === 404;
+    isMetadataError &&
+    (metadataError as { response?: { status?: number } })?.response?.status === 404;
+
+  const isLoading = isLoadingMetadata || isLoadingSessions;
 
   return (
     <div style={styles.page}>
-      <h1 style={styles.heading}>Training Plan</h1>
+      <div style={styles.header}>
+        <h1 style={styles.heading}>🚴 Training Plan</h1>
+        <p style={styles.subtitle}>Plan, track, and achieve your cycling goals</p>
+      </div>
 
       {/* Generate Plan Section */}
       <div style={styles.card}>
-        <h2 style={styles.cardTitle}>Generate New Plan</h2>
+        <h2 style={styles.cardTitle}>✨ Generate New Plan</h2>
+        <p style={styles.cardSubtitle}>Create a personalized training plan based on your goals</p>
         <div style={styles.generateRow}>
           <input
             style={{ ...styles.input, flex: 1 }}
             type="text"
-            placeholder="Goal (e.g. General Fitness, Century Ride)"
+            placeholder="Enter your goal (e.g., General Fitness, Century Ride, Race Preparation)"
             value={goalInput}
             onChange={(e) => setGoalInput(e.target.value)}
           />
@@ -75,7 +108,7 @@ export default function TrainingPage() {
             onClick={() => generateMutation.mutate()}
             disabled={generateMutation.isPending}
           >
-            {generateMutation.isPending ? 'Generating…' : 'Generate Plan'}
+            {generateMutation.isPending ? '⏳ Generating…' : '🎯 Generate Plan'}
           </button>
         </div>
         {generateError && <ErrorMessage message={generateError} />}
@@ -86,41 +119,67 @@ export default function TrainingPage() {
 
       {noActivePlan && (
         <div style={styles.emptyState}>
-          No active training plan. Generate one above to get started.
+          <div style={styles.emptyIcon}>📋</div>
+          <h3 style={styles.emptyTitle}>No Active Training Plan</h3>
+          <p style={styles.emptyText}>
+            Generate a new training plan above to get started on your cycling journey!
+          </p>
         </div>
       )}
 
-      {isError && !noActivePlan && <ErrorMessage message="Failed to load training plan." />}
+      {isMetadataError && !noActivePlan && (
+        <ErrorMessage message="Failed to load training plan." />
+      )}
+      {isSessionsError && <ErrorMessage message="Failed to load training sessions." />}
 
-      {plan && (
+      {planMetadata && (
         <div>
           {/* Plan Header */}
-          <div style={styles.card}>
+          <div style={styles.planCard}>
             <div style={styles.planHeader}>
-              <div>
-                <h2 style={styles.cardTitle}>Current Plan</h2>
-                <p style={styles.planMeta}>
-                  <strong>Goal:</strong> {plan.goal}
-                </p>
-                <p style={styles.planMeta}>
-                  <strong>Period:</strong> {plan.startDate} → {plan.endDate}
-                </p>
-                <p style={styles.planMeta}>
-                  <strong>Status:</strong>{' '}
-                  <span style={statusBadgeStyle(plan.status)}>{plan.status}</span>
-                </p>
+              <div style={styles.planHeaderLeft}>
+                <h2 style={styles.planTitle}>📊 Current Plan</h2>
+                <div style={styles.planMeta}>
+                  <div style={styles.metaItem}>
+                    <span style={styles.metaLabel}>Goal:</span>
+                    <span style={styles.metaValue}>{planMetadata.goal}</span>
+                  </div>
+                  <div style={styles.metaItem}>
+                    <span style={styles.metaLabel}>Period:</span>
+                    <span style={styles.metaValue}>
+                      {formatDateShort(planMetadata.startDate)} →{' '}
+                      {formatDateShort(planMetadata.endDate)}
+                    </span>
+                  </div>
+                  <div style={styles.metaItem}>
+                    <span style={styles.metaLabel}>Status:</span>
+                    <span style={statusBadgeStyle(planMetadata.status)}>{planMetadata.status}</span>
+                  </div>
+                </div>
               </div>
+              {planDetails && (
+                <div style={styles.statsContainer}>
+                  <div style={styles.statBox}>
+                    <div style={styles.statNumber}>{planDetails.completedSessions.length}</div>
+                    <div style={styles.statLabel}>Completed</div>
+                  </div>
+                  <div style={styles.statBox}>
+                    <div style={styles.statNumber}>{planDetails.trainingPlan.length}</div>
+                    <div style={styles.statLabel}>Planned</div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Calendar and Details Layout */}
-          {plan.sessions && plan.sessions.length > 0 && (
+          {allSessions.length > 0 && (
             <div style={styles.calendarSection}>
               <div style={styles.calendarContainer}>
-                <h3 style={styles.sectionTitle}>Training Calendar</h3>
+                <h3 style={styles.sectionTitle}>📅 Training Calendar</h3>
                 <Calendar
-                  startDate={plan.startDate}
-                  sessions={plan.sessions}
+                  startDate={planMetadata.startDate}
+                  sessions={allSessions}
                   onDateSelect={setSelectedDate}
                   selectedDate={selectedDate}
                 />
@@ -129,11 +188,7 @@ export default function TrainingPage() {
               {selectedDate && selectedDateSessions.length > 0 && (
                 <div style={styles.detailsContainer}>
                   <h3 style={styles.sectionTitle}>
-                    {new Date(selectedDate).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      month: 'short',
-                      day: 'numeric',
-                    })}
+                    {formatDateLong(selectedDate)}
                   </h3>
                   <div style={styles.sessionList}>
                     {selectedDateSessions.map((session) => (
@@ -153,22 +208,22 @@ export default function TrainingPage() {
               {selectedDate && selectedDateSessions.length === 0 && (
                 <div style={styles.detailsContainer}>
                   <h3 style={styles.sectionTitle}>
-                    {new Date(selectedDate).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      month: 'short',
-                      day: 'numeric',
-                    })}
+                    {formatDateLong(selectedDate)}
                   </h3>
-                  <p style={{ color: '#6b7280' }}>No training sessions scheduled for this date.</p>
+                  <div style={styles.emptyDateState}>
+                    <p style={styles.emptyDateIcon}>🌤️</p>
+                    <p style={styles.emptyDateText}>Rest day - No training sessions scheduled</p>
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          {(!plan.sessions || plan.sessions.length === 0) && (
-            <p style={{ color: '#6b7280', marginTop: '1rem' }}>
-              No sessions available for this plan.
-            </p>
+          {allSessions.length === 0 && (
+            <div style={styles.emptyState}>
+              <div style={styles.emptyIcon}>📅</div>
+              <p style={styles.emptyText}>No sessions available for this plan.</p>
+            </div>
           )}
         </div>
       )}
@@ -189,17 +244,53 @@ function SessionCard({
 
   return (
     <div style={styles.sessionCard}>
-      <div style={styles.sessionInfo}>
-        <div style={styles.sessionDate}>{session.scheduledDate}</div>
-        <div style={styles.sessionType}>{session.type}</div>
-        <div style={styles.sessionDetails}>
-          {session.distance != null && <span>{session.distance} km</span>}
-          {session.duration != null && <span> · {session.duration} min</span>}
-          {session.intensity && <span> · {session.intensity}</span>}
+      <div style={styles.sessionMain}>
+        <div style={styles.sessionHeader}>
+          <div style={styles.sessionType} aria-label={`Session type: ${session.type}`}>
+            {getActivityIcon(session.type)} {session.type}
+          </div>
+          <span style={statusBadgeStyle(session.status)} aria-label={`Status: ${session.status}`}>{session.status}</span>
         </div>
-      </div>
-      <div style={styles.sessionRight}>
-        <span style={statusBadgeStyle(session.status)}>{session.status}</span>
+
+        <div style={styles.sessionDetails}>
+          {session.distance != null && (
+            <div style={styles.detailItem} aria-label={`Distance: ${session.distance} kilometers`}>
+              <span style={styles.detailIcon} aria-hidden="true">📏</span>
+              <span style={styles.detailText}>{session.distance} km</span>
+            </div>
+          )}
+          {session.duration != null && (
+            <div style={styles.detailItem} aria-label={`Duration: ${session.duration} minutes`}>
+              <span style={styles.detailIcon} aria-hidden="true">⏱️</span>
+              <span style={styles.detailText}>{session.duration} min</span>
+            </div>
+          )}
+          {session.intensity && (
+            <div style={styles.detailItem} aria-label={`Intensity: ${session.intensity}`}>
+              <span style={styles.detailIcon} aria-hidden="true">💪</span>
+              <span style={styles.detailText}>{session.intensity}</span>
+            </div>
+          )}
+          {session.tss != null && (
+            <div style={styles.detailItem} aria-label={`Training Stress Score: ${session.tss}`}>
+              <span style={styles.detailIcon} aria-hidden="true">📈</span>
+              <span style={styles.detailText}>TSS: {session.tss}</span>
+            </div>
+          )}
+          {session.elevation != null && (
+            <div style={styles.detailItem} aria-label={`Elevation gain: ${session.elevation} meters`}>
+              <span style={styles.detailIcon} aria-hidden="true">⛰️</span>
+              <span style={styles.detailText}>{session.elevation}m</span>
+            </div>
+          )}
+          {session.targetZone && (
+            <div style={styles.detailItem} aria-label={`Target zone: ${session.targetZone}`}>
+              <span style={styles.detailIcon} aria-hidden="true">🎯</span>
+              <span style={styles.detailText}>Zone {session.targetZone}</span>
+            </div>
+          )}
+        </div>
+
         {isActionable && (
           <div style={styles.sessionActions}>
             <button
@@ -207,14 +298,14 @@ function SessionCard({
               onClick={() => onAction('COMPLETED')}
               disabled={isUpdating}
             >
-              Complete
+              ✓ Complete
             </button>
             <button
               style={{ ...styles.actionBtn, ...styles.skipBtn }}
               onClick={() => onAction('SKIPPED')}
               disabled={isUpdating}
             >
-              Skip
+              ⊘ Skip
             </button>
           </div>
         )}
@@ -223,64 +314,191 @@ function SessionCard({
   );
 }
 
-function statusBadgeStyle(status: string): React.CSSProperties {
-  const colors: Record<string, { bg: string; color: string }> = {
-    ACTIVE: { bg: '#dbeafe', color: '#1d4ed8' },
-    COMPLETED: { bg: '#d1fae5', color: '#065f46' },
-    SKIPPED: { bg: '#f3f4f6', color: '#6b7280' },
-    PLANNED: { bg: '#fef9c3', color: '#854d0e' },
+function getActivityIcon(type: string): string {
+  const icons: Record<string, string> = {
+    'ENDURANCE_RIDE': '🚴',
+    'INTERVAL_TRAINING': '⚡',
+    'HILL_CLIMBING': '⛰️',
+    'RECOVERY_RIDE': '🌿',
+    'TEMPO_RIDE': '🏃',
+    'SPRINT_TRAINING': '💨',
   };
-  const c = colors[status] ?? { bg: '#f3f4f6', color: '#374151' };
+  return icons[type] || '🚴';
+}
+
+function statusBadgeStyle(status: string): React.CSSProperties {
+  const colors: Record<string, { bg: string; color: string; border: string }> = {
+    ACTIVE: { bg: '#dbeafe', color: '#1e40af', border: '#93c5fd' },
+    COMPLETED: { bg: '#d1fae5', color: '#065f46', border: '#6ee7b7' },
+    SKIPPED: { bg: '#f3f4f6', color: '#374151', border: '#d1d5db' },
+    PLANNED: { bg: '#fef3c7', color: '#92400e', border: '#fcd34d' },
+  };
+  const c = colors[status] ?? { bg: '#f3f4f6', color: '#374151', border: '#d1d5db' };
   return {
-    padding: '0.2rem 0.6rem',
-    borderRadius: '9999px',
+    padding: '0.25rem 0.75rem',
+    borderRadius: '12px',
     fontSize: '0.75rem',
     fontWeight: 600,
     background: c.bg,
     color: c.color,
+    border: `1px solid ${c.border}`,
     whiteSpace: 'nowrap',
+    display: 'inline-block',
   };
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  page: { maxWidth: '1200px', margin: '0 auto', padding: '1.5rem' },
-  heading: { marginBottom: '1.5rem', color: '#111827' },
-  card: {
-    background: '#fff',
-    borderRadius: '8px',
-    border: '1px solid #e5e7eb',
-    padding: '1.5rem',
-    marginBottom: '1.5rem',
+  page: {
+    maxWidth: '1400px',
+    margin: '0 auto',
+    padding: '2rem 1.5rem',
   },
-  cardTitle: { margin: '0 0 1rem', color: '#111827', fontSize: '1.1rem' },
-  generateRow: { display: 'flex', gap: '0.75rem', alignItems: 'center' },
+  header: {
+    marginBottom: '2rem',
+    textAlign: 'center',
+  },
+  heading: {
+    margin: '0 0 0.5rem',
+    color: '#111827',
+    fontSize: '2.5rem',
+    fontWeight: 700,
+  },
+  subtitle: {
+    margin: 0,
+    color: '#6b7280',
+    fontSize: '1.1rem',
+  },
+  card: {
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    borderRadius: '12px',
+    padding: '2rem',
+    marginBottom: '2rem',
+    boxShadow: '0 10px 25px rgba(102, 126, 234, 0.2)',
+    color: '#fff',
+  },
+  cardTitle: {
+    margin: '0 0 0.5rem',
+    color: '#fff',
+    fontSize: '1.5rem',
+    fontWeight: 600,
+  },
+  cardSubtitle: {
+    margin: '0 0 1.5rem',
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: '0.95rem',
+  },
+  generateRow: {
+    display: 'flex',
+    gap: '1rem',
+    alignItems: 'center',
+  },
   input: {
-    padding: '0.5rem 0.75rem',
-    border: '1px solid #d1d5db',
-    borderRadius: '4px',
+    padding: '0.75rem 1rem',
+    border: '2px solid rgba(255,255,255,0.3)',
+    borderRadius: '8px',
     fontSize: '1rem',
     boxSizing: 'border-box',
+    background: 'rgba(255,255,255,0.95)',
+    color: '#111827',
   },
   button: {
-    padding: '0.55rem 1.25rem',
-    background: '#1a56db',
-    color: '#fff',
+    padding: '0.75rem 1.5rem',
+    background: '#fff',
+    color: '#667eea',
     border: 'none',
-    borderRadius: '4px',
-    fontSize: '0.95rem',
+    borderRadius: '8px',
+    fontSize: '1rem',
+    fontWeight: 600,
     cursor: 'pointer',
     whiteSpace: 'nowrap',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+    transition: 'transform 0.2s',
   },
   emptyState: {
     background: '#f9fafb',
-    border: '1px dashed #d1d5db',
-    borderRadius: '8px',
-    padding: '2rem',
+    border: '2px dashed #d1d5db',
+    borderRadius: '12px',
+    padding: '3rem 2rem',
     textAlign: 'center',
     color: '#6b7280',
   },
-  planHeader: { marginBottom: '1rem' },
-  planMeta: { margin: '0.25rem 0', color: '#374151' },
+  emptyIcon: {
+    fontSize: '4rem',
+    marginBottom: '1rem',
+  },
+  emptyTitle: {
+    margin: '0 0 0.5rem',
+    color: '#374151',
+    fontSize: '1.5rem',
+  },
+  emptyText: {
+    margin: 0,
+    color: '#6b7280',
+    fontSize: '1rem',
+  },
+  planCard: {
+    background: '#fff',
+    borderRadius: '12px',
+    border: '1px solid #e5e7eb',
+    padding: '2rem',
+    marginBottom: '2rem',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+  },
+  planHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: '2rem',
+  },
+  planHeaderLeft: {
+    flex: 1,
+  },
+  planTitle: {
+    margin: '0 0 1.5rem',
+    color: '#111827',
+    fontSize: '1.5rem',
+    fontWeight: 600,
+  },
+  planMeta: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.75rem',
+  },
+  metaItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+  },
+  metaLabel: {
+    fontWeight: 600,
+    color: '#6b7280',
+    minWidth: '80px',
+  },
+  metaValue: {
+    color: '#111827',
+  },
+  statsContainer: {
+    display: 'flex',
+    gap: '1rem',
+  },
+  statBox: {
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    borderRadius: '12px',
+    padding: '1.5rem',
+    minWidth: '120px',
+    textAlign: 'center',
+    color: '#fff',
+    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+  },
+  statNumber: {
+    fontSize: '2rem',
+    fontWeight: 700,
+    marginBottom: '0.25rem',
+  },
+  statLabel: {
+    fontSize: '0.875rem',
+    opacity: 0.9,
+  },
   calendarSection: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
@@ -288,48 +506,107 @@ const styles: Record<string, React.CSSProperties> = {
   },
   calendarContainer: {
     background: '#fff',
-    borderRadius: '8px',
+    borderRadius: '12px',
     border: '1px solid #e5e7eb',
     padding: '1.5rem',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
   },
   detailsContainer: {
     background: '#fff',
-    borderRadius: '8px',
+    borderRadius: '12px',
     border: '1px solid #e5e7eb',
     padding: '1.5rem',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
   },
-  sectionTitle: { margin: '0 0 1.5rem', color: '#111827', fontSize: '1rem', fontWeight: 600 },
-  sessionsTitle: { margin: '1rem 0 0.75rem', color: '#111827', fontSize: '1rem' },
-  sessionList: { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
+  sectionTitle: {
+    margin: '0 0 1.5rem',
+    color: '#111827',
+    fontSize: '1.1rem',
+    fontWeight: 600,
+  },
+  sessionList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+  },
   sessionCard: {
+    background: 'linear-gradient(135deg, #f9fafb 0%, #ffffff 100%)',
+    borderRadius: '10px',
+    border: '1px solid #e5e7eb',
+    padding: '1.25rem',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+    transition: 'transform 0.2s, box-shadow 0.2s',
+  },
+  sessionMain: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+  },
+  sessionHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '0.75rem 1rem',
-    background: '#f9fafb',
-    borderRadius: '6px',
-    border: '1px solid #e5e7eb',
   },
-  sessionInfo: { flex: 1 },
-  sessionDate: { fontWeight: 600, color: '#111827', fontSize: '0.9rem' },
-  sessionType: { color: '#374151', margin: '0.15rem 0' },
-  sessionDetails: { color: '#6b7280', fontSize: '0.85rem' },
-  sessionRight: {
+  sessionType: {
+    fontWeight: 600,
+    color: '#111827',
+    fontSize: '1.05rem',
+  },
+  sessionDetails: {
     display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-    gap: '0.5rem',
-    marginLeft: '1rem',
+    flexWrap: 'wrap',
+    gap: '0.75rem',
   },
-  sessionActions: { display: 'flex', gap: '0.5rem' },
-  actionBtn: {
-    padding: '0.3rem 0.75rem',
-    border: 'none',
-    borderRadius: '4px',
-    fontSize: '0.8rem',
-    cursor: 'pointer',
+  detailItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.35rem',
+    padding: '0.35rem 0.75rem',
+    background: '#f3f4f6',
+    borderRadius: '6px',
+    fontSize: '0.875rem',
+  },
+  detailIcon: {
+    fontSize: '1rem',
+  },
+  detailText: {
+    color: '#374151',
     fontWeight: 500,
   },
-  completeBtn: { background: '#d1fae5', color: '#065f46' },
-  skipBtn: { background: '#f3f4f6', color: '#374151' },
+  sessionActions: {
+    display: 'flex',
+    gap: '0.75rem',
+    marginTop: '0.5rem',
+  },
+  actionBtn: {
+    padding: '0.5rem 1.25rem',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+    fontWeight: 600,
+    transition: 'transform 0.2s',
+  },
+  completeBtn: {
+    background: '#d1fae5',
+    color: '#065f46',
+    border: '1px solid #6ee7b7',
+  },
+  skipBtn: {
+    background: '#f3f4f6',
+    color: '#374151',
+    border: '1px solid #d1d5db',
+  },
+  emptyDateState: {
+    textAlign: 'center',
+    padding: '2rem 1rem',
+  },
+  emptyDateIcon: {
+    fontSize: '3rem',
+    margin: '0 0 0.5rem',
+  },
+  emptyDateText: {
+    margin: 0,
+    color: '#6b7280',
+  },
 };
