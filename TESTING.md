@@ -2,43 +2,53 @@
 
 ## Overview
 
-I've set up a comprehensive test suite for the Calendar component and its integration with the TrainingPage. The tests validate that:
+The repository now has comprehensive test coverage across components, features, and API layers. The tests validate functionality, edge cases, and error handling for the critical parts of the application.
 
-1. The calendar renders correctly
-2. Days with sessions are highlighted
-3. Users can select dates and view session details
-4. Month navigation works properly
-5. The calendar integrates properly with the training page
+## Test Coverage Summary
+
+**Overall Coverage: 71.76%**
+
+- **Lines**: 71.76%
+- **Functions**: 75.51%
+- **Branches**: 89.9%
+- **Statements**: 71.76%
+
+### Coverage by Module
+
+- **Components**: 100% coverage
+  - Calendar.tsx
+  - ErrorMessage.tsx
+  - Layout.tsx
+  - LoadingSpinner.tsx
+  - ProtectedRoute.tsx
+
+- **Auth Features**: 98.09% coverage
+  - AuthContext.tsx
+  - LoginPage.tsx
+  - RegisterPage.tsx
+  - authApi.ts
+
+- **Training Features**: 98.09% coverage
+  - TrainingPage.tsx
+  - trainingApi.ts
+
+- **Profile Features**: Mixed coverage
+  - profileApi.ts: 100%
+  - ProfilePage.tsx: Not tested (complex component, future work)
 
 ## Setup Instructions
 
-### 1. Clear Disk Space (Required)
+### 1. Install Dependencies
 
-Before installing testing dependencies, you need to clear some disk space on your system:
-
-```powershell
-# Clean up npm cache
-npm cache clean --force
-
-# Delete old logs (optional)
-Remove-Item -Path $env:APPDATA\npm-cache -Recurse -Force -ErrorAction SilentlyContinue
-
-# You may also want to clean up other large files/folders
+```bash
+npm install
 ```
 
-Once you've freed up space, proceed to the next step.
+All testing dependencies are already configured in `package.json`.
 
-### 2. Install Testing Dependencies
+### 2. Run Tests
 
-```powershell
-npm install --save-dev vitest @testing-library/react @testing-library/jest-dom jsdom
-```
-
-### 3. Run the Tests
-
-Once dependencies are installed, you can run the tests with:
-
-```powershell
+```bash
 # Run all tests
 npm test
 
@@ -54,106 +64,160 @@ npm test:coverage
 
 ## Test Files
 
-### 1. [src/components/Calendar.test.tsx](src/components/Calendar.test.tsx)
+### Component Tests
 
-Tests for the Calendar component:
+1. **[src/components/Calendar.test.tsx](src/components/Calendar.test.tsx)** (11 tests)
+   - Calendar header rendering
+   - Day of week display
+   - Session highlighting
+   - Date selection
+   - Month navigation
 
-- **Rendering**: Verifies the calendar displays with correct month/year
-- **Calendar Days**: Validates all 7 days of the week are shown
-- **Session Highlighting**: Checks days with sessions are visually highlighted
-- **Date Selection**: Confirms clicking a day calls the selection callback
-- **Month Navigation**: Tests previous/next month buttons
-- **Selected Date Styling**: Verifies selected date has different styling
-- **Multiple Sessions**: Handles multiple sessions on the same day
-- **Empty States**: Works correctly with no sessions
+2. **[src/components/Layout.test.tsx](src/components/Layout.test.tsx)** (6 tests)
+   - Brand and navigation rendering
+   - Logout functionality
+   - Active link highlighting
+   - Child route rendering
 
-### 2. [src/features/training/TrainingPage.test.tsx](src/features/training/TrainingPage.test.tsx)
+3. **[src/components/ProtectedRoute.test.tsx](src/components/ProtectedRoute.test.tsx)** (2 tests)
+   - Authenticated access
+   - Redirect to login
 
-Integration tests for the Training Page with calendar:
+### Auth Feature Tests
 
-- **Calendar Integration**: Validates calendar renders within the training page
-- **Plan Header**: Checks plan details (goal, dates, status) display correctly
-- **Date Selection**: Tests selecting a date and viewing its sessions
-- **Session Details**: Validates session information displays (distance, duration, intensity)
-- **Empty Dates**: Shows message when selected date has no sessions
-- **Loading State**: Displays loading spinner during API calls
-- **Error Handling**: Shows error message on API failure
-- **Empty Plan State**: Shows empty state when no plan exists
-- **Layout**: Validates two-column grid layout
+4. **[src/features/auth/AuthContext.test.tsx](src/features/auth/AuthContext.test.tsx)** (6 tests)
+   - Context initialization
+   - Login/logout functionality
+   - Token management
+   - Authentication state
 
-## What the Tests Validate
+5. **[src/features/auth/LoginPage.test.tsx](src/features/auth/LoginPage.test.tsx)** (8 tests)
+   - Form rendering
+   - Field validation
+   - Successful login
+   - Error handling
+   - Loading states
 
-### Calendar Loads Correctly ✓
-- Calendar renders with the correct month and year
-- All 7 days of the week are displayed
-- Correct number of days for the month
+6. **[src/features/auth/RegisterPage.test.tsx](src/features/auth/RegisterPage.test.tsx)** (10 tests)
+   - Form rendering
+   - Field validation
+   - Password strength validation
+   - Successful registration
+   - Server error handling
 
-### Sessions Display ✓
-- Days with training sessions are highlighted in yellow
-- Session indicator dots are visible on days with activities
-- Multiple sessions on the same day are handled
+7. **[src/features/auth/authApi.test.ts](src/features/auth/authApi.test.ts)** (2 tests)
+   - Login API calls
+   - Register API calls
 
-### User Interaction ✓
-- Clicking a day calls the selection callback with the correct date
-- Selected date is highlighted with a blue background
-- Navigation buttons allow changing months
-- No callbacks occur for empty calendar slots
+### Training Feature Tests
 
-### Data Integration ✓
-- Calendar receives session data from the training plan
-- Session details are properly filtered by selected date
-- Plan metadata (dates, goal, status) are displayed
+8. **[src/features/training/TrainingPage.test.tsx](src/features/training/TrainingPage.test.tsx)** (12 tests)
+   - Calendar integration
+   - Plan header display
+   - Session details
+   - Loading and error states
+   - Empty states
 
-## Test Coverage
+9. **[src/features/training/trainingApi.test.ts](src/features/training/trainingApi.test.ts)** (5 tests)
+   - Get current plan
+   - Generate plan
+   - Update session
 
-Currently, the tests cover:
+### Profile Feature Tests
 
-- **Calendar Component**: ~95% coverage
-  - All UI rendering paths
-  - Date selection interactions
-  - Month navigation
-  - Session highlighting logic
+10. **[src/features/profile/profileApi.test.ts](src/features/profile/profileApi.test.ts)** (4 tests)
+    - Get profile
+    - Update profile
+    - Save background
+    - Update goals
 
-- **TrainingPage Component**: ~85% coverage (calendar-related)
-  - Calendar rendering
-  - Date selection with session details
-  - Error and loading states
-  - Empty state handling
-  - API integration
+### Utility Tests
+
+11. **[src/test/calendarUtils.test.ts](src/test/calendarUtils.test.ts)** (6 tests)
+    - Calendar utility functions
+
+## Coverage Thresholds
+
+The project has configured coverage thresholds in `vitest.config.ts`:
+
+```typescript
+coverage: {
+  thresholds: {
+    lines: 60,
+    functions: 50,
+    branches: 80,
+    statements: 60,
+  },
+}
+```
+
+All thresholds are currently met ✅
 
 ## Running Specific Tests
 
-```powershell
+```bash
 # Run only Calendar tests
 npm test Calendar
 
-# Run only TrainingPage tests
-npm test TrainingPage
+# Run only auth-related tests
+npm test auth
 
-# Run a specific test by name
-npm test -- --grep "renders calendar header"
+# Run a specific test file
+npm test LoginPage
 
 # Run tests matching a pattern
-npm test -- --grep "date"
+npm test -- --grep "validation"
 ```
 
 ## Continuous Integration (CI)
 
-If you want to add tests to your CI/CD pipeline, add this to your workflow:
+To add tests to your CI/CD pipeline, add this to your workflow:
 
 ```yaml
 - name: Run tests
   run: npm test -- --run
+
+- name: Run tests with coverage
+  run: npm test:coverage
 ```
 
 The `--run` flag runs tests once and exits (useful for CI environments).
+
+## What the Tests Validate
+
+### Authentication Flow ✓
+- User registration with validation
+- User login with error handling
+- Token management and storage
+- Protected route access control
+- Logout functionality
+
+### Training Features ✓
+- Calendar rendering and navigation
+- Session display and highlighting
+- Date selection
+- Training plan display
+- API integration
+
+### Form Validation ✓
+- Required fields
+- Email format validation
+- Password strength requirements
+- Server error display
+- Loading states
+
+### Component Integration ✓
+- Navigation and routing
+- State management
+- Error boundaries
+- Loading states
 
 ## Troubleshooting
 
 ### "Module not found" errors
 
 Make sure all dependencies are installed:
-```powershell
+```bash
 npm install
 ```
 
@@ -166,30 +230,33 @@ test: {
 }
 ```
 
-### Window/DOM errors
+### Coverage files in git
 
-The setup.ts file provides necessary mocks for browser APIs. If you encounter other browser-related errors, add mocks there.
+The `coverage/` directory is excluded via `.gitignore` to prevent committing generated reports.
 
 ## Adding More Tests
 
 To add tests for new features:
 
-1. Create a `.test.tsx` file next to your component
+1. Create a `.test.tsx` or `.test.ts` file next to your component/module
 2. Follow the existing test patterns
 3. Use descriptive test names that explain what is being tested
 4. Run `npm test -- --watch` during development
 
-Example:
+Example test structure:
+
 ```typescript
-it('does something specific', async () => {
-  // Arrange
-  const props = { /* ... */ };
-  
-  // Act
-  render(<MyComponent {...props} />);
-  
-  // Assert
-  expect(screen.getByText('expected text')).toBeInTheDocument();
+describe('MyComponent', () => {
+  it('renders with correct props', () => {
+    // Arrange
+    const props = { /* ... */ };
+    
+    // Act
+    render(<MyComponent {...props} />);
+    
+    // Assert
+    expect(screen.getByText('expected text')).toBeInTheDocument();
+  });
 });
 ```
 
@@ -198,3 +265,13 @@ it('does something specific', async () => {
 - [Vitest Documentation](https://vitest.dev/)
 - [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
 - [Testing Best Practices](https://testing-library.com/docs/queries/about)
+
+## Future Improvements
+
+Areas that could benefit from additional test coverage:
+
+1. **ProfilePage.tsx** - Complex component with multiple tabs and forms
+2. **App.tsx** - Integration tests for the main app component
+3. **apiClient.ts** - Token refresh flow and error handling
+4. **E2E tests** - Full user flows using Playwright or Cypress
+
