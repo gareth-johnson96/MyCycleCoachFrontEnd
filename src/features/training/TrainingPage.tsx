@@ -6,12 +6,18 @@ import { formatDateLong, formatDateShort } from './dateUtils';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
 import Calendar from '../../components/Calendar';
+import GpxUploader from './GpxUploader';
+import { useAuth } from '../auth/useAuth';
 
 export default function TrainingPage() {
   const queryClient = useQueryClient();
+  const { userId } = useAuth();
   const [goalInput, setGoalInput] = useState('');
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [showGpxUploader, setShowGpxUploader] = useState(false);
+  const [customDateRange, setCustomDateRange] = useState<{ from: string; to: string } | null>(null);
+  const [dateRangeMode, setDateRangeMode] = useState<'all' | 'upcoming' | 'history' | 'custom'>('all');
 
   // First, get the current plan metadata
   const {
@@ -25,14 +31,35 @@ export default function TrainingPage() {
     retry: false,
   });
 
-  // Calculate date range based on plan dates
+  // Calculate date range based on plan dates and filter mode
   const dateRange = useMemo(() => {
     if (!planMetadata) return null;
-    return {
-      from: planMetadata.startDate,
-      to: planMetadata.endDate,
-    };
-  }, [planMetadata]);
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    switch (dateRangeMode) {
+      case 'upcoming':
+        return {
+          from: today,
+          to: planMetadata.endDate,
+        };
+      case 'history':
+        return {
+          from: planMetadata.startDate,
+          to: today,
+        };
+      case 'custom':
+        return customDateRange || {
+          from: planMetadata.startDate,
+          to: planMetadata.endDate,
+        };
+      default:
+        return {
+          from: planMetadata.startDate,
+          to: planMetadata.endDate,
+        };
+    }
+  }, [planMetadata, dateRangeMode, customDateRange]);
 
   // Fetch sessions when we have a date range
   const {
@@ -114,6 +141,21 @@ export default function TrainingPage() {
         {generateError && <ErrorMessage message={generateError} />}
       </div>
 
+      {/* GPX Upload Section */}
+      {userId && (
+        <div>
+          <div style={styles.gpxToggleContainer}>
+            <button
+              style={styles.gpxToggleButton}
+              onClick={() => setShowGpxUploader(!showGpxUploader)}
+            >
+              {showGpxUploader ? '▼ Hide GPX Analyzer' : '▶ Upload & Analyze GPX Route'}
+            </button>
+          </div>
+          {showGpxUploader && <GpxUploader userId={userId} />}
+        </div>
+      )}
+
       {/* Current Plan Section */}
       {isLoading && <LoadingSpinner />}
 
@@ -170,6 +212,66 @@ export default function TrainingPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Date Range Filter */}
+          <div style={styles.filterCard}>
+            <h3 style={styles.filterTitle}>📅 View Sessions</h3>
+            <div style={styles.filterButtons}>
+              <button
+                style={dateRangeMode === 'all' ? styles.filterButtonActive : styles.filterButton}
+                onClick={() => setDateRangeMode('all')}
+              >
+                All Sessions
+              </button>
+              <button
+                style={dateRangeMode === 'upcoming' ? styles.filterButtonActive : styles.filterButton}
+                onClick={() => setDateRangeMode('upcoming')}
+              >
+                Upcoming Rides
+              </button>
+              <button
+                style={dateRangeMode === 'history' ? styles.filterButtonActive : styles.filterButton}
+                onClick={() => setDateRangeMode('history')}
+              >
+                History
+              </button>
+              <button
+                style={dateRangeMode === 'custom' ? styles.filterButtonActive : styles.filterButton}
+                onClick={() => setDateRangeMode('custom')}
+              >
+                Custom Range
+              </button>
+            </div>
+            
+            {dateRangeMode === 'custom' && (
+              <div style={styles.customRangeInputs}>
+                <div style={styles.customRangeField}>
+                  <label style={styles.customRangeLabel}>From:</label>
+                  <input
+                    type="date"
+                    style={styles.customRangeInput}
+                    value={customDateRange?.from || planMetadata.startDate}
+                    onChange={(e) => setCustomDateRange({
+                      from: e.target.value,
+                      to: customDateRange?.to || planMetadata.endDate,
+                    })}
+                  />
+                </div>
+                <div style={styles.customRangeField}>
+                  <label style={styles.customRangeLabel}>To:</label>
+                  <input
+                    type="date"
+                    style={styles.customRangeInput}
+                    value={customDateRange?.to || planMetadata.endDate}
+                    onChange={(e) => setCustomDateRange({
+                      from: customDateRange?.from || planMetadata.startDate,
+                      to: e.target.value,
+                    })}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Calendar and Details Layout */}
