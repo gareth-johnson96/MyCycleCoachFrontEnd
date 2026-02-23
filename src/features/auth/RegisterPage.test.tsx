@@ -41,6 +41,7 @@ describe('RegisterPage Component', () => {
     );
 
     expect(screen.getByRole('heading', { name: '🚴 MyCycleCoach' })).toBeInTheDocument();
+    expect(screen.getByText('Create your account to start training')).toBeInTheDocument();
     const inputs = screen.getAllByRole('textbox');
     expect(inputs.length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
