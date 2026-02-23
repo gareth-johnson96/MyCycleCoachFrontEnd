@@ -40,8 +40,7 @@ describe('RegisterPage Component', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('heading', { name: 'MyCycleCoach' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Create Account' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '🚴 MyCycleCoach' })).toBeInTheDocument();
     const inputs = screen.getAllByRole('textbox');
     expect(inputs.length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();

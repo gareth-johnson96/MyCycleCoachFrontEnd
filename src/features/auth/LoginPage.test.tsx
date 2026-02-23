@@ -40,8 +40,7 @@ describe('LoginPage Component', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('heading', { name: 'MyCycleCoach' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Sign In' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '🚴 MyCycleCoach' })).toBeInTheDocument();
     const inputs = screen.getAllByRole('textbox');
     expect(inputs.length).toBeGreaterThan(0);
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();

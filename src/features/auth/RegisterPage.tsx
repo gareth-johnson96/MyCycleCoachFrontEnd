@@ -34,8 +34,10 @@ export default function RegisterPage() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h1 style={styles.title}>MyCycleCoach</h1>
-        <h2 style={styles.subtitle}>Create Account</h2>
+        <div style={styles.header}>
+          <h1 style={styles.title}>🚴 MyCycleCoach</h1>
+          <p style={styles.subtitle}>Create your account to start training</p>
+        </div>
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate>
           <div style={styles.field}>
@@ -67,13 +69,13 @@ export default function RegisterPage() {
           {serverError && <div style={styles.serverError}>{serverError}</div>}
 
           <button style={styles.button} type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating account…' : 'Create Account'}
+            {isSubmitting ? '⏳ Creating account…' : '✨ Create Account'}
           </button>
         </form>
 
         <p style={styles.link}>
           Already have an account?{' '}
-          <Link to="/login">Sign in</Link>
+          <Link to="/login" style={styles.linkText}>Sign in</Link>
         </p>
       </div>
     </div>
@@ -86,47 +88,91 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#f0f4f8',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    padding: '1rem',
   },
   card: {
     background: '#fff',
-    padding: '2rem',
-    borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    padding: '2.5rem',
+    borderRadius: '12px',
+    boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
     width: '100%',
-    maxWidth: '400px',
+    maxWidth: '450px',
   },
-  title: { margin: '0 0 0.25rem', color: '#1a56db', fontSize: '1.5rem' },
-  subtitle: { margin: '0 0 1.5rem', fontSize: '1.1rem', color: '#374151' },
-  field: { marginBottom: '1rem' },
-  label: { display: 'block', marginBottom: '0.25rem', fontWeight: 500, color: '#374151' },
+  header: {
+    textAlign: 'center',
+    marginBottom: '2rem',
+  },
+  title: { 
+    margin: '0 0 0.5rem', 
+    color: '#111827', 
+    fontSize: '2rem',
+    fontWeight: 700,
+  },
+  subtitle: { 
+    margin: 0, 
+    fontSize: '1rem', 
+    color: '#6b7280',
+  },
+  field: { 
+    marginBottom: '1.5rem' 
+  },
+  label: { 
+    display: 'block', 
+    marginBottom: '0.5rem', 
+    fontWeight: 600, 
+    color: '#374151',
+    fontSize: '0.95rem',
+  },
   input: {
     width: '100%',
-    padding: '0.5rem 0.75rem',
-    border: '1px solid #d1d5db',
-    borderRadius: '4px',
+    padding: '0.75rem 1rem',
+    border: '2px solid #e5e7eb',
+    borderRadius: '8px',
     fontSize: '1rem',
     boxSizing: 'border-box',
+    background: '#f9fafb',
+    transition: 'border-color 0.2s, background 0.2s',
   },
-  error: { color: '#dc2626', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' },
+  error: { 
+    color: '#dc2626', 
+    fontSize: '0.85rem', 
+    marginTop: '0.5rem', 
+    display: 'block',
+    fontWeight: 500,
+  },
   serverError: {
     background: '#fef2f2',
     border: '1px solid #fecaca',
     color: '#dc2626',
-    padding: '0.75rem',
-    borderRadius: '4px',
-    marginBottom: '1rem',
+    padding: '0.75rem 1rem',
+    borderRadius: '8px',
+    marginBottom: '1.5rem',
+    fontWeight: 500,
   },
   button: {
     width: '100%',
-    padding: '0.65rem',
-    background: '#1a56db',
+    padding: '0.75rem',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     color: '#fff',
     border: 'none',
-    borderRadius: '4px',
+    borderRadius: '8px',
     fontSize: '1rem',
+    fontWeight: 600,
     cursor: 'pointer',
     marginTop: '0.5rem',
+    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+    transition: 'transform 0.2s, box-shadow 0.2s',
   },
-  link: { textAlign: 'center', marginTop: '1rem', color: '#6b7280' },
+  link: { 
+    textAlign: 'center', 
+    marginTop: '1.5rem', 
+    color: '#6b7280',
+    fontSize: '0.95rem',
+  },
+  linkText: {
+    color: '#667eea',
+    fontWeight: 600,
+    textDecoration: 'none',
+  },
 };
