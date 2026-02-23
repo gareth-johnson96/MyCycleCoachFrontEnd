@@ -1,14 +1,17 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getCurrentPlan, generatePlan, updateSession } from './trainingApi';
 import type { PlannedSession } from './types';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
+import Calendar from '../../components/Calendar';
 
 export default function TrainingPage() {
   const queryClient = useQueryClient();
   const [goalInput, setGoalInput] = useState('');
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<{ from: string; to: string } | null>(null);
 
   const {
     data: plan,
@@ -17,15 +20,17 @@ export default function TrainingPage() {
     error,
   } = useQuery({
     queryKey: ['trainingPlan'],
-    queryFn: getCurrentPlan,
+    queryFn: () => getCurrentPlan(dateRange?.from, dateRange?.to),
     retry: false,
   });
 
   const generateMutation = useMutation({
     mutationFn: () => generatePlan(goalInput.trim() || undefined),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['trainingPlan'] });
       setGenerateError(null);
+      // Set date range to the plan's dates
+      setDateRange({ from: data.startDate, to: data.endDate });
     },
     onError: () => setGenerateError('Failed to generate plan.'),
   });
@@ -37,6 +42,14 @@ export default function TrainingPage() {
       queryClient.invalidateQueries({ queryKey: ['trainingPlan'] });
     },
   });
+
+  const selectedDateSessions = useMemo(() => {
+    if (!plan?.sessions || !selectedDate) return [];
+    return plan.sessions.filter((session) => {
+      const sessionDate = session.scheduledDate.split('T')[0];
+      return sessionDate === selectedDate;
+    });
+  }, [plan?.sessions, selectedDate]);
 
   const noActivePlan =
     isError &&
@@ -80,38 +93,75 @@ export default function TrainingPage() {
       {isError && !noActivePlan && <ErrorMessage message="Failed to load training plan." />}
 
       {plan && (
-        <div style={styles.card}>
-          <div style={styles.planHeader}>
-            <div>
-              <h2 style={styles.cardTitle}>Current Plan</h2>
-              <p style={styles.planMeta}>
-                <strong>Goal:</strong> {plan.goal}
-              </p>
-              <p style={styles.planMeta}>
-                <strong>Period:</strong> {plan.startDate} → {plan.endDate}
-              </p>
-              <p style={styles.planMeta}>
-                <strong>Status:</strong>{' '}
-                <span style={statusBadgeStyle(plan.status)}>{plan.status}</span>
-              </p>
+        <div>
+          {/* Plan Header */}
+          <div style={styles.card}>
+            <div style={styles.planHeader}>
+              <div>
+                <h2 style={styles.cardTitle}>Current Plan</h2>
+                <p style={styles.planMeta}>
+                  <strong>Goal:</strong> {plan.goal}
+                </p>
+                <p style={styles.planMeta}>
+                  <strong>Period:</strong> {plan.startDate} → {plan.endDate}
+                </p>
+                <p style={styles.planMeta}>
+                  <strong>Status:</strong>{' '}
+                  <span style={statusBadgeStyle(plan.status)}>{plan.status}</span>
+                </p>
+              </div>
             </div>
           </div>
 
+          {/* Calendar and Details Layout */}
           {plan.sessions && plan.sessions.length > 0 && (
-            <div>
-              <h3 style={styles.sessionsTitle}>Sessions</h3>
-              <div style={styles.sessionList}>
-                {plan.sessions.map((session) => (
-                  <SessionCard
-                    key={session.id}
-                    session={session}
-                    onAction={(status) =>
-                      sessionMutation.mutate({ sessionId: session.id, status })
-                    }
-                    isUpdating={sessionMutation.isPending}
-                  />
-                ))}
+            <div style={styles.calendarSection}>
+              <div style={styles.calendarContainer}>
+                <h3 style={styles.sectionTitle}>Training Calendar</h3>
+                <Calendar
+                  startDate={plan.startDate}
+                  sessions={plan.sessions}
+                  onDateSelect={setSelectedDate}
+                  selectedDate={selectedDate}
+                />
               </div>
+
+              {selectedDate && selectedDateSessions.length > 0 && (
+                <div style={styles.detailsContainer}>
+                  <h3 style={styles.sectionTitle}>
+                    {new Date(selectedDate).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </h3>
+                  <div style={styles.sessionList}>
+                    {selectedDateSessions.map((session) => (
+                      <SessionCard
+                        key={session.id}
+                        session={session}
+                        onAction={(status) =>
+                          sessionMutation.mutate({ sessionId: session.id, status })
+                        }
+                        isUpdating={sessionMutation.isPending}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedDate && selectedDateSessions.length === 0 && (
+                <div style={styles.detailsContainer}>
+                  <h3 style={styles.sectionTitle}>
+                    {new Date(selectedDate).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </h3>
+                  <p style={{ color: '#6b7280' }}>No training sessions scheduled for this date.</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -193,7 +243,7 @@ function statusBadgeStyle(status: string): React.CSSProperties {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  page: { maxWidth: '700px', margin: '0 auto', padding: '1.5rem' },
+  page: { maxWidth: '1200px', margin: '0 auto', padding: '1.5rem' },
   heading: { marginBottom: '1.5rem', color: '#111827' },
   card: {
     background: '#fff',
@@ -231,6 +281,24 @@ const styles: Record<string, React.CSSProperties> = {
   },
   planHeader: { marginBottom: '1rem' },
   planMeta: { margin: '0.25rem 0', color: '#374151' },
+  calendarSection: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '1.5rem',
+  },
+  calendarContainer: {
+    background: '#fff',
+    borderRadius: '8px',
+    border: '1px solid #e5e7eb',
+    padding: '1.5rem',
+  },
+  detailsContainer: {
+    background: '#fff',
+    borderRadius: '8px',
+    border: '1px solid #e5e7eb',
+    padding: '1.5rem',
+  },
+  sectionTitle: { margin: '0 0 1.5rem', color: '#111827', fontSize: '1rem', fontWeight: 600 },
   sessionsTitle: { margin: '1rem 0 0.75rem', color: '#111827', fontSize: '1rem' },
   sessionList: { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
   sessionCard: {
