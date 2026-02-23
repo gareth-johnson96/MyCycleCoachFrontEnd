@@ -7,33 +7,45 @@ import * as trainingApi from './trainingApi';
 // Mock the API
 vi.mock('./trainingApi');
 
-const mockPlan = {
+const mockPlanMetadata = {
   id: 1,
   userId: 1,
   startDate: '2026-02-01',
   endDate: '2026-02-28',
   goal: 'General Fitness',
   status: 'ACTIVE',
-  sessions: [
+};
+
+const mockPlanDetails = {
+  id: 1,
+  userId: 1,
+  completedSessions: [],
+  trainingPlan: [
     {
       id: 1,
+      planId: 1,
       scheduledDate: '2026-02-23T10:00:00Z',
       type: 'Easy Ride',
       distance: 20,
       duration: 60,
       intensity: 'Easy',
       status: 'PLANNED',
-      completedAt: null,
+      tss: 50,
+      elevation: 100,
+      targetZone: 'Z2',
     },
     {
       id: 2,
+      planId: 1,
       scheduledDate: '2026-02-25T14:00:00Z',
       type: 'Interval Training',
       distance: 30,
       duration: 90,
       intensity: 'Hard',
       status: 'PLANNED',
-      completedAt: null,
+      tss: 85,
+      elevation: 200,
+      targetZone: 'Z4',
     },
   ],
 };
@@ -53,7 +65,8 @@ describe('TrainingPage with Calendar', () => {
 
   it('renders the training page heading', async () => {
     const queryClient = createTestQueryClient();
-    vi.mocked(trainingApi.getCurrentPlan).mockResolvedValue(mockPlan);
+    vi.mocked(trainingApi.getCurrentPlan).mockResolvedValue(mockPlanMetadata);
+    vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(mockPlanDetails);
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -61,12 +74,13 @@ describe('TrainingPage with Calendar', () => {
       </QueryClientProvider>
     );
 
-    expect(screen.getByText('Training Plan')).toBeInTheDocument();
+    expect(screen.getByText('🚴 Training Plan')).toBeInTheDocument();
   });
 
   it('renders the calendar when a plan is loaded', async () => {
     const queryClient = createTestQueryClient();
-    vi.mocked(trainingApi.getCurrentPlan).mockResolvedValue(mockPlan);
+    vi.mocked(trainingApi.getCurrentPlan).mockResolvedValue(mockPlanMetadata);
+    vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(mockPlanDetails);
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -75,13 +89,14 @@ describe('TrainingPage with Calendar', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Training Calendar')).toBeInTheDocument();
+      expect(screen.getByText('📅 Training Calendar')).toBeInTheDocument();
     });
   });
 
   it('displays the month/year in the calendar', async () => {
     const queryClient = createTestQueryClient();
-    vi.mocked(trainingApi.getCurrentPlan).mockResolvedValue(mockPlan);
+    vi.mocked(trainingApi.getCurrentPlan).mockResolvedValue(mockPlanMetadata);
+    vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(mockPlanDetails);
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -96,7 +111,8 @@ describe('TrainingPage with Calendar', () => {
 
   it('shows session details when a date is selected', async () => {
     const queryClient = createTestQueryClient();
-    vi.mocked(trainingApi.getCurrentPlan).mockResolvedValue(mockPlan);
+    vi.mocked(trainingApi.getCurrentPlan).mockResolvedValue(mockPlanMetadata);
+    vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(mockPlanDetails);
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -105,7 +121,7 @@ describe('TrainingPage with Calendar', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Training Calendar')).toBeInTheDocument();
+      expect(screen.getByText('📅 Training Calendar')).toBeInTheDocument();
     });
 
     // Click on day 23 which has a session
@@ -120,14 +136,15 @@ describe('TrainingPage with Calendar', () => {
 
       await waitFor(() => {
         // Check for the session type
-        expect(screen.getByText('Easy Ride')).toBeInTheDocument();
+        expect(screen.getByText(/Easy Ride/)).toBeInTheDocument();
       });
     }
   });
 
   it('displays plan details in the header', async () => {
     const queryClient = createTestQueryClient();
-    vi.mocked(trainingApi.getCurrentPlan).mockResolvedValue(mockPlan);
+    vi.mocked(trainingApi.getCurrentPlan).mockResolvedValue(mockPlanMetadata);
+    vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(mockPlanDetails);
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -141,12 +158,13 @@ describe('TrainingPage with Calendar', () => {
     });
   });
 
-  it('calls getCurrentPlan with date range when plan is generated', async () => {
+  it('calls getCurrentPlan when plan is generated', async () => {
     const queryClient = createTestQueryClient();
     const getCurrentPlanMock = vi
       .mocked(trainingApi.getCurrentPlan)
-      .mockResolvedValue(mockPlan);
-    vi.mocked(trainingApi.generatePlan).mockResolvedValue(mockPlan);
+      .mockResolvedValue(mockPlanMetadata);
+    vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(mockPlanDetails);
+    vi.mocked(trainingApi.generatePlan).mockResolvedValue(mockPlanMetadata);
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -155,22 +173,23 @@ describe('TrainingPage with Calendar', () => {
     );
 
     // Fill in goal input
-    const input = screen.getByPlaceholderText(/Goal/);
+    const input = screen.getByPlaceholderText(/Enter your goal/);
     fireEvent.change(input, { target: { value: 'Century Ride' } });
 
     // Click generate button
-    const generateBtn = screen.getByText('Generate Plan');
+    const generateBtn = screen.getByText(/Generate Plan/);
     fireEvent.click(generateBtn);
 
     await waitFor(() => {
-      // After generation, getCurrentPlan should be called with date range
+      // After generation, getCurrentPlan should be called
       expect(getCurrentPlanMock).toHaveBeenCalled();
     });
   });
 
   it('renders session details with distance, duration, and intensity', async () => {
     const queryClient = createTestQueryClient();
-    vi.mocked(trainingApi.getCurrentPlan).mockResolvedValue(mockPlan);
+    vi.mocked(trainingApi.getCurrentPlan).mockResolvedValue(mockPlanMetadata);
+    vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(mockPlanDetails);
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -179,7 +198,7 @@ describe('TrainingPage with Calendar', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Training Calendar')).toBeInTheDocument();
+      expect(screen.getByText('📅 Training Calendar')).toBeInTheDocument();
     });
 
     // Click on day 23
@@ -193,30 +212,34 @@ describe('TrainingPage with Calendar', () => {
       fireEvent.click(calendarDay);
 
       await waitFor(() => {
-        expect(screen.getByText('Easy Ride')).toBeInTheDocument();
+        expect(screen.getByText(/Easy Ride/)).toBeInTheDocument();
       });
     }
   });
 
   it('shows message when no sessions on selected date', async () => {
     const planWithGapSessions = {
-      ...mockPlan,
-      sessions: [
+      ...mockPlanDetails,
+      trainingPlan: [
         {
           id: 1,
+          planId: 1,
           scheduledDate: '2026-02-01T10:00:00Z',
           type: 'Easy Ride',
           distance: 20,
           duration: 60,
           intensity: 'Easy',
           status: 'PLANNED',
-          completedAt: null,
+          tss: 50,
+          elevation: 100,
+          targetZone: 'Z2',
         },
       ],
     };
 
     const queryClient = createTestQueryClient();
-    vi.mocked(trainingApi.getCurrentPlan).mockResolvedValue(planWithGapSessions);
+    vi.mocked(trainingApi.getCurrentPlan).mockResolvedValue(mockPlanMetadata);
+    vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(planWithGapSessions);
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -225,7 +248,7 @@ describe('TrainingPage with Calendar', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Training Calendar')).toBeInTheDocument();
+      expect(screen.getByText('📅 Training Calendar')).toBeInTheDocument();
     });
 
     // Click on day 15 which has no sessions
@@ -238,7 +261,7 @@ describe('TrainingPage with Calendar', () => {
       fireEvent.click(day15);
 
       await waitFor(() => {
-        expect(screen.getByText(/No training sessions scheduled for this date/)).toBeInTheDocument();
+        expect(screen.getByText(/Rest day - No training sessions scheduled/)).toBeInTheDocument();
       });
     }
   });
@@ -248,7 +271,7 @@ describe('TrainingPage with Calendar', () => {
     vi.mocked(trainingApi.getCurrentPlan).mockImplementation(
       () =>
         new Promise((resolve) => {
-          setTimeout(() => resolve(mockPlan), 100);
+          setTimeout(() => resolve(mockPlanMetadata), 100);
         })
     );
 
@@ -259,7 +282,7 @@ describe('TrainingPage with Calendar', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('Training Plan')).toBeInTheDocument();
+      expect(screen.getByText('🚴 Training Plan')).toBeInTheDocument();
     });
   });
 
@@ -295,14 +318,15 @@ describe('TrainingPage with Calendar', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/No active training plan. Generate one above to get started/)
+        screen.getByText(/No Active Training Plan/)
       ).toBeInTheDocument();
     });
   });
 
   it('displays two-column layout with calendar and details', async () => {
     const queryClient = createTestQueryClient();
-    vi.mocked(trainingApi.getCurrentPlan).mockResolvedValue(mockPlan);
+    vi.mocked(trainingApi.getCurrentPlan).mockResolvedValue(mockPlanMetadata);
+    vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(mockPlanDetails);
 
     render(
       <QueryClientProvider client={queryClient}>
@@ -312,7 +336,7 @@ describe('TrainingPage with Calendar', () => {
 
     await waitFor(() => {
       // Check that both calendar and potential details section exist
-      expect(screen.getByText('Training Calendar')).toBeInTheDocument();
+      expect(screen.getByText('📅 Training Calendar')).toBeInTheDocument();
       // Plan header should also be visible
       expect(screen.getByText(/Current Plan/i)).toBeInTheDocument();
     });

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getCurrentPlan, generatePlan, updateSession } from './trainingApi';
+import { getCurrentPlan, getPlanWithSessions, generatePlan, updateSession } from './trainingApi';
 import { apiClient } from '../../lib/apiClient';
-import type { TrainingPlanResponse, CompleteSessionRequest } from './types';
+import type { TrainingPlanResponse, TrainingPlanDetailResponse, CompleteSessionRequest } from './types';
 
 // Mock the apiClient
 vi.mock('../../lib/apiClient', () => ({
@@ -18,7 +18,7 @@ describe('trainingApi', () => {
   });
 
   describe('getCurrentPlan', () => {
-    it('calls apiClient.get with correct endpoint and no params', async () => {
+    it('calls apiClient.get with correct endpoint', async () => {
       const mockPlan: TrainingPlanResponse = {
         id: 1,
         userId: 1,
@@ -26,41 +26,37 @@ describe('trainingApi', () => {
         endDate: '2026-02-28',
         goal: 'General Fitness',
         status: 'ACTIVE',
-        sessions: [],
       };
 
       vi.mocked(apiClient.get).mockResolvedValue({ data: mockPlan });
 
       const result = await getCurrentPlan();
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/training/plan/current', {
-        params: {},
-      });
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/training/plan/current');
       expect(result).toEqual(mockPlan);
     });
+  });
 
+  describe('getPlanWithSessions', () => {
     it('calls apiClient.get with fromDate and toDate params', async () => {
-      const mockPlan: TrainingPlanResponse = {
+      const mockPlanDetail: TrainingPlanDetailResponse = {
         id: 1,
         userId: 1,
-        startDate: '2026-02-01',
-        endDate: '2026-02-28',
-        goal: 'General Fitness',
-        status: 'ACTIVE',
-        sessions: [],
+        completedSessions: [],
+        trainingPlan: [],
       };
 
-      vi.mocked(apiClient.get).mockResolvedValue({ data: mockPlan });
+      vi.mocked(apiClient.get).mockResolvedValue({ data: mockPlanDetail });
 
-      const result = await getCurrentPlan('2026-02-01', '2026-02-28');
+      const result = await getPlanWithSessions('2026-02-01', '2026-02-28');
 
-      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/training/plan/current', {
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/training/plan', {
         params: {
           fromDate: '2026-02-01',
           toDate: '2026-02-28',
         },
       });
-      expect(result).toEqual(mockPlan);
+      expect(result).toEqual(mockPlanDetail);
     });
   });
 
@@ -73,7 +69,6 @@ describe('trainingApi', () => {
         endDate: '2026-02-28',
         goal: 'General Fitness',
         status: 'ACTIVE',
-        sessions: [],
       };
 
       vi.mocked(apiClient.post).mockResolvedValue({ data: mockPlan });
@@ -96,7 +91,6 @@ describe('trainingApi', () => {
         endDate: '2026-02-28',
         goal: 'Race Training',
         status: 'ACTIVE',
-        sessions: [],
       };
 
       vi.mocked(apiClient.post).mockResolvedValue({ data: mockPlan });
@@ -116,9 +110,7 @@ describe('trainingApi', () => {
     it('calls apiClient.put with correct endpoint and data', async () => {
       const sessionId = 123;
       const updateData: CompleteSessionRequest = {
-        actualDistance: 25,
-        actualDuration: 90,
-        notes: 'Great ride!',
+        status: 'COMPLETED',
       };
 
       vi.mocked(apiClient.put).mockResolvedValue({ data: undefined });

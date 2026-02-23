@@ -1,16 +1,17 @@
 import { apiClient } from '../../lib/apiClient';
-import type { TrainingPlanResponse, CompleteSessionRequest } from './types';
+import type { TrainingPlanResponse, TrainingPlanDetailResponse, CompleteSessionRequest } from './types';
 
-export async function getCurrentPlan(
-  fromDate?: string,
-  toDate?: string
-): Promise<TrainingPlanResponse> {
-  const params: Record<string, string> = {};
-  if (fromDate) params.fromDate = fromDate;
-  if (toDate) params.toDate = toDate;
+export async function getCurrentPlan(): Promise<TrainingPlanResponse> {
+  const response = await apiClient.get<TrainingPlanResponse>('/api/v1/training/plan/current');
+  return response.data;
+}
 
-  const response = await apiClient.get<TrainingPlanResponse>('/api/v1/training/plan/current', {
-    params,
+export async function getPlanWithSessions(
+  fromDate: string,
+  toDate: string
+): Promise<TrainingPlanDetailResponse> {
+  const response = await apiClient.get<TrainingPlanDetailResponse>('/api/v1/training/plan', {
+    params: { fromDate, toDate },
   });
   return response.data;
 }

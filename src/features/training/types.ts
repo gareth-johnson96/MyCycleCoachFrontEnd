@@ -5,18 +5,27 @@ export interface TrainingPlanResponse {
   endDate: string;
   goal: string;
   status: string;
-  sessions?: PlannedSession[];
+}
+
+export interface TrainingPlanDetailResponse {
+  id: number;
+  userId: number;
+  completedSessions: PlannedSession[];
+  trainingPlan: PlannedSession[];
 }
 
 export interface PlannedSession {
   id: number;
+  planId: number;
   scheduledDate: string;
   type: string;
   distance: number | null;
   duration: number | null;
   intensity: string;
   status: string;
-  completedAt: string | null;
+  tss: number | null;
+  elevation: number | null;
+  targetZone: string | null;
 }
 
 export interface CompleteSessionRequest {
