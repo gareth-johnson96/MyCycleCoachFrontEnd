@@ -161,7 +161,7 @@ describe('RegisterPage Component', () => {
         password: 'password123',
       });
       expect(mockLogin).toHaveBeenCalledWith(mockAuthResponse);
-      expect(mockNavigate).toHaveBeenCalledWith('/training');
+      expect(mockNavigate).toHaveBeenCalledWith('/questionnaire');
     });
   });
 

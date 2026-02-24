@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import TrainingPage from './TrainingPage';
 import * as trainingApi from './trainingApi';
+import { AuthProvider } from '../auth/AuthContext';
 
 // Mock the API
 vi.mock('./trainingApi');
@@ -69,9 +70,13 @@ describe('TrainingPage with Calendar', () => {
     vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(mockPlanDetails);
 
     render(
-      <QueryClientProvider client={queryClient}>
-        <TrainingPage />
-      </QueryClientProvider>
+      <AuthProvider>
+        <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <TrainingPage />
+        </QueryClientProvider>
+      </AuthProvider>
+      </AuthProvider>
     );
 
     expect(screen.getByText('🚴 Training Plan')).toBeInTheDocument();
@@ -83,9 +88,13 @@ describe('TrainingPage with Calendar', () => {
     vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(mockPlanDetails);
 
     render(
-      <QueryClientProvider client={queryClient}>
-        <TrainingPage />
-      </QueryClientProvider>
+      <AuthProvider>
+        <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <TrainingPage />
+        </QueryClientProvider>
+      </AuthProvider>
+      </AuthProvider>
     );
 
     await waitFor(() => {
@@ -99,9 +108,11 @@ describe('TrainingPage with Calendar', () => {
     vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(mockPlanDetails);
 
     render(
-      <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
         <TrainingPage />
       </QueryClientProvider>
+      </AuthProvider>
     );
 
     await waitFor(() => {
@@ -115,9 +126,11 @@ describe('TrainingPage with Calendar', () => {
     vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(mockPlanDetails);
 
     render(
-      <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
         <TrainingPage />
       </QueryClientProvider>
+      </AuthProvider>
     );
 
     await waitFor(() => {
@@ -147,9 +160,11 @@ describe('TrainingPage with Calendar', () => {
     vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(mockPlanDetails);
 
     render(
-      <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
         <TrainingPage />
       </QueryClientProvider>
+      </AuthProvider>
     );
 
     await waitFor(() => {
@@ -167,9 +182,11 @@ describe('TrainingPage with Calendar', () => {
     vi.mocked(trainingApi.generatePlan).mockResolvedValue(mockPlanMetadata);
 
     render(
-      <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
         <TrainingPage />
       </QueryClientProvider>
+      </AuthProvider>
     );
 
     // Fill in goal input
@@ -192,9 +209,11 @@ describe('TrainingPage with Calendar', () => {
     vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(mockPlanDetails);
 
     render(
-      <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
         <TrainingPage />
       </QueryClientProvider>
+      </AuthProvider>
     );
 
     await waitFor(() => {
@@ -242,9 +261,11 @@ describe('TrainingPage with Calendar', () => {
     vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(planWithGapSessions);
 
     render(
-      <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
         <TrainingPage />
       </QueryClientProvider>
+      </AuthProvider>
     );
 
     await waitFor(() => {
@@ -276,9 +297,11 @@ describe('TrainingPage with Calendar', () => {
     );
 
     render(
-      <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
         <TrainingPage />
       </QueryClientProvider>
+      </AuthProvider>
     );
 
     await waitFor(() => {
@@ -293,9 +316,11 @@ describe('TrainingPage with Calendar', () => {
     );
 
     render(
-      <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
         <TrainingPage />
       </QueryClientProvider>
+      </AuthProvider>
     );
 
     await waitFor(() => {
@@ -311,9 +336,11 @@ describe('TrainingPage with Calendar', () => {
     vi.mocked(trainingApi.getCurrentPlan).mockRejectedValue(error);
 
     render(
-      <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
         <TrainingPage />
       </QueryClientProvider>
+      </AuthProvider>
     );
 
     await waitFor(() => {
@@ -329,9 +356,11 @@ describe('TrainingPage with Calendar', () => {
     vi.mocked(trainingApi.getPlanWithSessions).mockResolvedValue(mockPlanDetails);
 
     render(
-      <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
         <TrainingPage />
       </QueryClientProvider>
+      </AuthProvider>
     );
 
     await waitFor(() => {
