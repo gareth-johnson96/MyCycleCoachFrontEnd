@@ -9,6 +9,7 @@ import RegisterPage from './features/auth/RegisterPage';
 import ProfilePage from './features/profile/ProfilePage';
 import TrainingPage from './features/training/TrainingPage';
 import QuestionnairePage from './features/profile/QuestionnairePage';
+import StravaPage from './features/strava/StravaPage';
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
                 <Route path="/" element={<Navigate to="/training" replace />} />
                 <Route path="/training" element={<TrainingPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/strava" element={<StravaPage />} />
               </Route>
             </Route>
 

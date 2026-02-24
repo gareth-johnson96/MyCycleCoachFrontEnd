@@ -53,3 +53,10 @@ export interface GpxAnalysisResponse {
   estimatedRideTimeMinutes: number;
   uploadedAt: string;
 }
+
+export interface GpxFileResponse {
+  id: number;
+  filename: string;
+  userId: number;
+  uploadedAt: string;
+}

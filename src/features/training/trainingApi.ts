@@ -1,5 +1,5 @@
 import { apiClient } from '../../lib/apiClient';
-import type { TrainingPlanResponse, TrainingPlanDetailResponse, CompleteSessionRequest, GpxAnalysisResponse } from './types';
+import type { TrainingPlanResponse, TrainingPlanDetailResponse, CompleteSessionRequest, GpxAnalysisResponse, GpxFileResponse } from './types';
 
 export async function getCurrentPlan(): Promise<TrainingPlanResponse> {
   const response = await apiClient.get<TrainingPlanResponse>('/api/v1/training/plan/current');
@@ -48,5 +48,15 @@ export async function uploadGpxFile(file: File, userId: number): Promise<GpxAnal
 
 export async function getGpxAnalysis(gpxFileId: number): Promise<GpxAnalysisResponse> {
   const response = await apiClient.get<GpxAnalysisResponse>(`/api/v1/gpx/${gpxFileId}`);
+  return response.data;
+}
+
+export async function getGpxByFilename(filename: string): Promise<GpxAnalysisResponse> {
+  const response = await apiClient.get<GpxAnalysisResponse>(`/api/v1/gpx/analyze/${filename}`);
+  return response.data;
+}
+
+export async function getUserGpxFiles(): Promise<GpxFileResponse[]> {
+  const response = await apiClient.get<GpxFileResponse[]>('/api/v1/gpx/user');
   return response.data;
 }
