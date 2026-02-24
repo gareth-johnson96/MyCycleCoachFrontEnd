@@ -24,5 +24,13 @@ export interface QuestionnaireRequest {
 }
 
 export async function submitQuestionnaire(data: QuestionnaireRequest): Promise<void> {
-  await apiClient.post('/api/v1/user/questionnaire', data);
+  // Transform targetEventDate from YYYY-MM-DD to ISO 8601 format (YYYY-MM-DDTHH:mm:ss)
+  const transformedData = {
+    ...data,
+    ...(data.targetEventDate && {
+      targetEventDate: `${data.targetEventDate}T00:00:00`
+    })
+  };
+  
+  await apiClient.post('/api/v1/user/questionnaire', transformedData);
 }

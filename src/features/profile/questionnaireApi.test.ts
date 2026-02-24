@@ -34,4 +34,40 @@ describe('questionnaireApi', () => {
 
     await expect(submitQuestionnaire(mockData)).rejects.toThrow('Network error');
   });
+
+  it('transforms targetEventDate to ISO 8601 format with time', async () => {
+    const mockData = {
+      age: 30,
+      goals: 'Complete a century ride',
+      targetEvent: 'Tour de France',
+      targetEventDate: '2026-09-12',
+    };
+
+    vi.mocked(apiClient.post).mockResolvedValue({ data: {} });
+
+    await submitQuestionnaire(mockData);
+
+    expect(apiClient.post).toHaveBeenCalledWith('/api/v1/user/questionnaire', {
+      age: 30,
+      goals: 'Complete a century ride',
+      targetEvent: 'Tour de France',
+      targetEventDate: '2026-09-12T00:00:00',
+    });
+  });
+
+  it('does not modify data when targetEventDate is not provided', async () => {
+    const mockData = {
+      age: 25,
+      goals: 'Improve endurance',
+    };
+
+    vi.mocked(apiClient.post).mockResolvedValue({ data: {} });
+
+    await submitQuestionnaire(mockData);
+
+    expect(apiClient.post).toHaveBeenCalledWith('/api/v1/user/questionnaire', {
+      age: 25,
+      goals: 'Improve endurance',
+    });
+  });
 });
