@@ -8,6 +8,7 @@ import LoginPage from './features/auth/LoginPage';
 import RegisterPage from './features/auth/RegisterPage';
 import ProfilePage from './features/profile/ProfilePage';
 import TrainingPage from './features/training/TrainingPage';
+import QuestionnairePage from './features/profile/QuestionnairePage';
 
 export default function App() {
   return (
@@ -21,6 +22,9 @@ export default function App() {
 
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
+              {/* Questionnaire page without layout (full screen) */}
+              <Route path="/questionnaire" element={<QuestionnairePage />} />
+              
               <Route element={<Layout />}>
                 <Route path="/" element={<Navigate to="/training" replace />} />
                 <Route path="/training" element={<TrainingPage />} />

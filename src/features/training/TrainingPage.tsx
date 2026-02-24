@@ -6,12 +6,18 @@ import { formatDateLong, formatDateShort } from './dateUtils';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import ErrorMessage from '../../components/ErrorMessage';
 import Calendar from '../../components/Calendar';
+import GpxUploader from './GpxUploader';
+import { useAuth } from '../auth/useAuth';
 
 export default function TrainingPage() {
   const queryClient = useQueryClient();
+  const { userId } = useAuth();
   const [goalInput, setGoalInput] = useState('');
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [showGpxUploader, setShowGpxUploader] = useState(false);
+  const [customDateRange, setCustomDateRange] = useState<{ from: string; to: string } | null>(null);
+  const [dateRangeMode, setDateRangeMode] = useState<'all' | 'upcoming' | 'history' | 'custom'>('all');
 
   // First, get the current plan metadata
   const {
@@ -25,14 +31,35 @@ export default function TrainingPage() {
     retry: false,
   });
 
-  // Calculate date range based on plan dates
+  // Calculate date range based on plan dates and filter mode
   const dateRange = useMemo(() => {
     if (!planMetadata) return null;
-    return {
-      from: planMetadata.startDate,
-      to: planMetadata.endDate,
-    };
-  }, [planMetadata]);
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    switch (dateRangeMode) {
+      case 'upcoming':
+        return {
+          from: today,
+          to: planMetadata.endDate,
+        };
+      case 'history':
+        return {
+          from: planMetadata.startDate,
+          to: today,
+        };
+      case 'custom':
+        return customDateRange || {
+          from: planMetadata.startDate,
+          to: planMetadata.endDate,
+        };
+      default:
+        return {
+          from: planMetadata.startDate,
+          to: planMetadata.endDate,
+        };
+    }
+  }, [planMetadata, dateRangeMode, customDateRange]);
 
   // Fetch sessions when we have a date range
   const {
@@ -114,6 +141,21 @@ export default function TrainingPage() {
         {generateError && <ErrorMessage message={generateError} />}
       </div>
 
+      {/* GPX Upload Section */}
+      {userId && (
+        <div>
+          <div style={styles.gpxToggleContainer}>
+            <button
+              style={styles.gpxToggleButton}
+              onClick={() => setShowGpxUploader(!showGpxUploader)}
+            >
+              {showGpxUploader ? '▼ Hide GPX Analyzer' : '▶ Upload & Analyze GPX Route'}
+            </button>
+          </div>
+          {showGpxUploader && <GpxUploader userId={userId} />}
+        </div>
+      )}
+
       {/* Current Plan Section */}
       {isLoading && <LoadingSpinner />}
 
@@ -170,6 +212,66 @@ export default function TrainingPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Date Range Filter */}
+          <div style={styles.filterCard}>
+            <h3 style={styles.filterTitle}>📅 View Sessions</h3>
+            <div style={styles.filterButtons}>
+              <button
+                style={dateRangeMode === 'all' ? styles.filterButtonActive : styles.filterButton}
+                onClick={() => setDateRangeMode('all')}
+              >
+                All Sessions
+              </button>
+              <button
+                style={dateRangeMode === 'upcoming' ? styles.filterButtonActive : styles.filterButton}
+                onClick={() => setDateRangeMode('upcoming')}
+              >
+                Upcoming Rides
+              </button>
+              <button
+                style={dateRangeMode === 'history' ? styles.filterButtonActive : styles.filterButton}
+                onClick={() => setDateRangeMode('history')}
+              >
+                History
+              </button>
+              <button
+                style={dateRangeMode === 'custom' ? styles.filterButtonActive : styles.filterButton}
+                onClick={() => setDateRangeMode('custom')}
+              >
+                Custom Range
+              </button>
+            </div>
+            
+            {dateRangeMode === 'custom' && (
+              <div style={styles.customRangeInputs}>
+                <div style={styles.customRangeField}>
+                  <label style={styles.customRangeLabel}>From:</label>
+                  <input
+                    type="date"
+                    style={styles.customRangeInput}
+                    value={customDateRange?.from || planMetadata.startDate}
+                    onChange={(e) => setCustomDateRange({
+                      from: e.target.value,
+                      to: customDateRange?.to || planMetadata.endDate,
+                    })}
+                  />
+                </div>
+                <div style={styles.customRangeField}>
+                  <label style={styles.customRangeLabel}>To:</label>
+                  <input
+                    type="date"
+                    style={styles.customRangeInput}
+                    value={customDateRange?.to || planMetadata.endDate}
+                    onChange={(e) => setCustomDateRange({
+                      from: customDateRange?.from || planMetadata.startDate,
+                      to: e.target.value,
+                    })}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Calendar and Details Layout */}
@@ -608,5 +710,83 @@ const styles: Record<string, React.CSSProperties> = {
   emptyDateText: {
     margin: 0,
     color: '#6b7280',
+  },
+  gpxToggleContainer: {
+    marginBottom: '2rem',
+  },
+  gpxToggleButton: {
+    padding: '0.75rem 1.5rem',
+    background: '#fff',
+    color: '#667eea',
+    border: '2px solid #667eea',
+    borderRadius: '8px',
+    fontSize: '1rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'background 0.2s, color 0.2s',
+  },
+  filterCard: {
+    background: '#fff',
+    borderRadius: '12px',
+    border: '1px solid #e5e7eb',
+    padding: '1.5rem',
+    marginBottom: '2rem',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+  },
+  filterTitle: {
+    margin: '0 0 1rem',
+    color: '#111827',
+    fontSize: '1.1rem',
+    fontWeight: 600,
+  },
+  filterButtons: {
+    display: 'flex',
+    gap: '0.75rem',
+    flexWrap: 'wrap',
+  },
+  filterButton: {
+    padding: '0.5rem 1rem',
+    background: '#f3f4f6',
+    color: '#374151',
+    border: '2px solid #e5e7eb',
+    borderRadius: '6px',
+    fontSize: '0.95rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'background 0.2s, border-color 0.2s',
+  },
+  filterButtonActive: {
+    padding: '0.5rem 1rem',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: '#fff',
+    border: '2px solid #667eea',
+    borderRadius: '6px',
+    fontSize: '0.95rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
+  },
+  customRangeInputs: {
+    display: 'flex',
+    gap: '1rem',
+    marginTop: '1rem',
+  },
+  customRangeField: {
+    flex: 1,
+  },
+  customRangeLabel: {
+    display: 'block',
+    marginBottom: '0.5rem',
+    fontWeight: 600,
+    color: '#374151',
+    fontSize: '0.875rem',
+  },
+  customRangeInput: {
+    width: '100%',
+    padding: '0.5rem 0.75rem',
+    border: '2px solid #e5e7eb',
+    borderRadius: '6px',
+    fontSize: '0.95rem',
+    boxSizing: 'border-box',
   },
 };

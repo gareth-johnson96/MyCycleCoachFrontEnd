@@ -34,3 +34,22 @@ export interface PlannedSession {
 export interface CompleteSessionRequest {
   status: 'COMPLETED' | 'SKIPPED';
 }
+
+export interface GpxClimb {
+  id: number;
+  distanceMeters: number;
+  elevationGainMeters: number;
+  averageGradient: number;
+  startPointIndex: number;
+  endPointIndex: number;
+}
+
+export interface GpxAnalysisResponse {
+  gpxFileId: number;
+  filename: string;
+  climbCount: number;
+  climbs: GpxClimb[];
+  totalDistanceKm: number;
+  estimatedRideTimeMinutes: number;
+  uploadedAt: string;
+}

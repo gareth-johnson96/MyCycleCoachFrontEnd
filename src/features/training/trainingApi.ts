@@ -1,5 +1,5 @@
 import { apiClient } from '../../lib/apiClient';
-import type { TrainingPlanResponse, TrainingPlanDetailResponse, CompleteSessionRequest } from './types';
+import type { TrainingPlanResponse, TrainingPlanDetailResponse, CompleteSessionRequest, GpxAnalysisResponse } from './types';
 
 export async function getCurrentPlan(): Promise<TrainingPlanResponse> {
   const response = await apiClient.get<TrainingPlanResponse>('/api/v1/training/plan/current');
@@ -31,4 +31,22 @@ export async function updateSession(
   data: CompleteSessionRequest
 ): Promise<void> {
   await apiClient.put(`/api/v1/training/plan/session/${sessionId}`, data);
+}
+
+export async function uploadGpxFile(file: File, userId: number): Promise<GpxAnalysisResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('userId', userId.toString());
+  
+  const response = await apiClient.post<GpxAnalysisResponse>('/api/v1/gpx/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+}
+
+export async function getGpxAnalysis(gpxFileId: number): Promise<GpxAnalysisResponse> {
+  const response = await apiClient.get<GpxAnalysisResponse>(`/api/v1/gpx/${gpxFileId}`);
+  return response.data;
 }

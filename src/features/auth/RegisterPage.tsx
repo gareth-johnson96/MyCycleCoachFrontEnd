@@ -22,7 +22,7 @@ export default function RegisterPage() {
       await registerUser(data);
       const authResponse = await login(data);
       setAuth(authResponse);
-      navigate('/training');
+      navigate('/questionnaire');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       setServerError(
