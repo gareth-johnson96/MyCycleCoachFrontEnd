@@ -71,11 +71,9 @@ describe('TrainingPage with Calendar', () => {
 
     render(
       <AuthProvider>
-        <AuthProvider>
         <QueryClientProvider client={queryClient}>
           <TrainingPage />
         </QueryClientProvider>
-      </AuthProvider>
       </AuthProvider>
     );
 
@@ -89,11 +87,9 @@ describe('TrainingPage with Calendar', () => {
 
     render(
       <AuthProvider>
-        <AuthProvider>
         <QueryClientProvider client={queryClient}>
           <TrainingPage />
         </QueryClientProvider>
-      </AuthProvider>
       </AuthProvider>
     );
 
