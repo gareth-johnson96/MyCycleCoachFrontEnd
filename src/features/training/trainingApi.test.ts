@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getCurrentPlan, getPlanWithSessions, generatePlan, updateSession } from './trainingApi';
+import { getCurrentPlan, getPlanWithSessions, generatePlan, updateSession, getGpxByFilename, getUserGpxFiles } from './trainingApi';
 import { apiClient } from '../../lib/apiClient';
-import type { TrainingPlanResponse, TrainingPlanDetailResponse, CompleteSessionRequest } from './types';
+import type { TrainingPlanResponse, TrainingPlanDetailResponse, CompleteSessionRequest, GpxAnalysisResponse, GpxFileResponse } from './types';
 
 // Mock the apiClient
 vi.mock('../../lib/apiClient', () => ({
@@ -121,6 +121,53 @@ describe('trainingApi', () => {
         `/api/v1/training/plan/session/${sessionId}`,
         updateData
       );
+    });
+  });
+
+  describe('getGpxByFilename', () => {
+    it('calls apiClient.get with correct endpoint', async () => {
+      const mockAnalysis: GpxAnalysisResponse = {
+        gpxFileId: 1,
+        filename: 'test.gpx',
+        climbCount: 2,
+        climbs: [],
+        totalDistanceKm: 50.5,
+        estimatedRideTimeMinutes: 120,
+        uploadedAt: '2024-01-15T10:00:00',
+      };
+
+      vi.mocked(apiClient.get).mockResolvedValue({ data: mockAnalysis });
+
+      const result = await getGpxByFilename('test.gpx');
+
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/gpx/analyze/test.gpx');
+      expect(result).toEqual(mockAnalysis);
+    });
+  });
+
+  describe('getUserGpxFiles', () => {
+    it('calls apiClient.get with correct endpoint', async () => {
+      const mockFiles: GpxFileResponse[] = [
+        {
+          id: 1,
+          filename: 'ride1.gpx',
+          userId: 123,
+          uploadedAt: '2024-01-15T10:00:00',
+        },
+        {
+          id: 2,
+          filename: 'ride2.gpx',
+          userId: 123,
+          uploadedAt: '2024-01-16T11:00:00',
+        },
+      ];
+
+      vi.mocked(apiClient.get).mockResolvedValue({ data: mockFiles });
+
+      const result = await getUserGpxFiles();
+
+      expect(apiClient.get).toHaveBeenCalledWith('/api/v1/gpx/user');
+      expect(result).toEqual(mockFiles);
     });
   });
 });

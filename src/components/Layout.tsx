@@ -22,6 +22,12 @@ export default function Layout() {
             Training
           </NavLink>
           <NavLink
+            to="/strava"
+            style={({ isActive }) => ({ ...styles.navLink, ...(isActive ? styles.navLinkActive : {}) })}
+          >
+            Strava
+          </NavLink>
+          <NavLink
             to="/profile"
             style={({ isActive }) => ({ ...styles.navLink, ...(isActive ? styles.navLinkActive : {}) })}
           >
